@@ -32,8 +32,6 @@ defmodule FnTest do
     assert Fn.eq(false).(false) == true
   end
 
-#  f = fn(a, b, c, d) -> "a=#{inspect a}, b=#{inspect b}, c=#{inspect c}, d=#{inspect d}" end
-
   test "arity" do
     assert Fn.arity(fn -> nil end) == 0
     assert Fn.arity(fn _ -> nil end) == 1
@@ -65,7 +63,7 @@ defmodule FnTest do
       assert Fn.rcompose([f]).(0) == f.(0)
     end
 
-    test "temperature conversion example works" do
+    test "temperature conversions" do
       # °F to °C => Deduct 32, then multiply by 5, then divide by 9
       f2c = Fn.rcompose [&(&1 - 32), &(&1 * 5), &(&1 / 9)]
 
@@ -79,26 +77,6 @@ defmodule FnTest do
     end
   end
 
-  describe "_apply" do
-    test "no arguments" do
-      f = fn -> "no args" end
-      f0 = Fn._apply(f, [])
-      assert f0.() == "no args"
-    end
-
-    test "single argument" do
-      f = fn a -> "a=#{a}" end
-      f0 = Fn._apply(f, [1])
-      assert f0.() == "a=1"
-    end
-
-    test "multiple arguments" do
-      f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
-      f0 = Fn._apply(f, [1, 2, 3, 4])
-      assert f0.() == "a=1, b=2, c=3, d=4"
-    end
-  end
-
   describe "bind" do
     test "no arguments" do
       f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
@@ -106,18 +84,22 @@ defmodule FnTest do
       assert f3.(1, 2, 3, 4) == "a=1, b=2, c=3, d=4"
     end
 
-#    test "single argument" do
-#      f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
-#      f2 = f |> Fn.bind [4]
-#      assert f2.(1, 2) == "a=1, b=2, c=3, d=4"
-#    end
-#
-#    test "multiple arguments" do
-#      f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
-#      f2 = f3 |> Fn.bind [3, 4]
-#      assert f2.(1, 2) == "a=1, b=2, c=3, d=4"
-#      f0 = f2 |> Fn.bind [1, 2]
-#      assert f0.() == "a=1, b=2, c=3, d=4"
-#    end
+    test "single argument" do
+      f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
+      f2 = Fn.bind(f, [4])
+      assert f2.(1, 2, 3) == "a=1, b=2, c=3, d=4"
+    end
+
+    test "multiple arguments" do
+      f = fn a, b, c, d -> "a=#{a}, b=#{b}, c=#{c}, d=#{d}" end
+      f2 = Fn.bind(f, [3, 4])
+      assert f2.(1, 2) == "a=1, b=2, c=3, d=4"
+      f0 = Fn.bind(f2, [1, 2])
+      assert f0.() == "a=1, b=2, c=3, d=4"
+    end
+
+    test "too many arguments raises" do
+      catch_error(Fn.bind(&(&1), [0, 1]).())
+    end
   end
 end
