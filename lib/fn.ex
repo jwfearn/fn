@@ -19,7 +19,8 @@ defmodule Fn do
   def ok(v), do: constant({:ok, v})
   def error, do: constant(:error)
   def error(v), do: constant({:error, v})
-  def _raise(v), do: fn -> raise v end
+  def _raise(v), do: fn -> raise(v) end
+  def _raise(v, message), do: fn -> raise(v, message) end
   def eq(v), do: &(&1 == v)
   def match(v), do: &(&1 === v)
 
@@ -44,9 +45,9 @@ defmodule Fn do
   @spec arity(arity_n_fn_t) :: integer
   def arity(f), do: :erlang.fun_info(f)[:arity]
 
-  # takes a zero-arity function that may raise exceptions and returns a new
+  # Takes a zero-arity function that may raise exceptions and returns a new
   # zero-arity function that does not raise exceptions, converting exceptions
-  # to an error tuple
+  # to an error tuple.
   def ex_to_err(f, error_tag \\ :error) do
     fn ->
       try do
@@ -56,14 +57,16 @@ defmodule Fn do
     end
   end
 
-  # takes a zero-arity function that may return an :error tuple and
-  # returns a new zero-arity function that does not return an :error
-  # tuple, converting :error tuples to excpetions and raising them
-  def err_to_ex(f, exception_module \\ RuntimeError) do
+  # Takes a zero-arity function that may return an error atom or tuple and
+  # returns a new zero-arity function that raises exceptions, converting
+  # errors to an exception.
+  def err_to_ex(f, exception_module \\ RuntimeError, error_tag \\ :error) do
     fn ->
       ret = f.()
+      raise_fn = Fn._raise(exception_module, ret |> inspect)
       case ret do
-        {:error, _} -> raise(exception_module, message: ret |> inspect)
+        {^error_tag, _} -> raise_fn.()
+        ^error_tag -> raise_fn.()
         _ -> ret
       end
     end

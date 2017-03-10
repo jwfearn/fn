@@ -111,7 +111,7 @@ defmodule FnTest do
   end
 
   describe "partial" do
-    due = fn(tax, units, price, ship) -> (units * price * (1 + tax)) + ship end
+#    due = fn(tax, units, price, ship) -> (units * price * (1 + tax)) + ship end
 
 #    free_ship1 = &(due(&1, &2, &3, 0))
 #    free_ship2 = Fn.rpartial(due, 0)
@@ -155,15 +155,27 @@ defmodule FnTest do
 #    end
   end
 
+  defmodule MyError, do: defexception message: __MODULE__
+
   describe "ex_to_err" do
     test "with default tag" do
-      assert {:error, %RuntimeError{message: "msg"}} =
-        Fn.ex_to_err(fn -> raise "msg" end).()
+      f = Fn.ex_to_err(fn -> raise "s" end)
+      assert {:error, %RuntimeError{message: "s"}} = f.()
     end
 
     test "with custom tag" do
-      assert {:x, %RuntimeError{message: "msg"}} =
-        Fn.ex_to_err(fn -> raise "msg" end, :x).()
+      f = Fn.ex_to_err(fn -> raise "s" end, :x)
+      assert {:x, %RuntimeError{message: "s"}} = f.()
+    end
+
+    test "with custom error" do
+      f = Fn.ex_to_err(fn -> raise(MyError, "s") end)
+      assert {:error, %MyError{message: "s"}} = f.()
+    end
+
+    test "with custom error and custom tag" do
+      f = Fn.ex_to_err(fn -> raise(MyError, "s") end, :x)
+      assert {:x, %MyError{message: "s"}} = f.()
     end
 
     test "without exceptions" do
@@ -172,10 +184,16 @@ defmodule FnTest do
   end
 
   describe "err_to_ex" do
-    test "with default exception module" do
+    test "raises RuntimeError by default" do
+      assert_raise(RuntimeError, Fn.err_to_ex(fn -> :error end))
+      assert_raise(RuntimeError, Fn.err_to_ex(fn -> {:error, "s"} end))
     end
 
-    test "with custom exception module" do
+    test "can raise a custom error" do
+      assert_raise(MyError, Fn.err_to_ex(fn -> :error end, MyError))
+      assert_raise(MyError, Fn.err_to_ex(fn -> {:error, "s"} end, MyError))
+      assert_raise(MyError, Fn.err_to_ex(fn -> :x end, MyError, :x))
+      assert_raise(MyError, Fn.err_to_ex(fn -> {:x, "s"} end, MyError, :x))
     end
 
     test "without errors" do
